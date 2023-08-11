@@ -1,0 +1,6 @@
+
+flask
+flasgger
+werkzeug
+tiktoken
+gunicorn

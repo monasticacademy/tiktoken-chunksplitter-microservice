@@ -1,0 +1,51 @@
+swagger: '2.0'
+info:
+  title: TikToken Microservice
+  description: A microservice to tokenize text using TikToken
+  version: '1.0'
+consumes:
+  - application/json
+produces:
+  - application/json
+securityDefinitions:
+  BasicAuth:
+    type: basic
+paths:
+  /tokenize:
+    post:
+      security:
+        - BasicAuth: []
+      summary: Tokenize text into chunks based on token limit
+      description: Tokenizes the given text based on a specific model's token limit and returns chunks
+      parameters:
+        - in: body
+          name: body
+          description: Request parameters including model_name, token_limit, and text
+          required: true
+          schema:
+            type: object
+            properties:
+              model_name:
+                type: string
+                description: Name of the model to be used for tokenization (e.g., gpt-4)
+              token_limit:
+                type: integer
+                description: The maximum number of tokens allowed per chunk
+              text:
+                type: string
+                description: The text to be tokenized
+      responses:
+        200:
+          description: Successful operation
+          schema:
+            type: object
+            properties:
+              chunks:
+                type: array
+                description: An array of text chunks tokenized
+                items:
+                  type: string
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
