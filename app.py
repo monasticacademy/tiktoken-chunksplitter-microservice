@@ -3,7 +3,7 @@ import os
 import logging
 import tiktoken
 import re
-from func_tools import wraps
+from functools import wraps
 from flask import Flask, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
