@@ -42,64 +42,76 @@ def requires_auth(f):
 
 # Function to split text into chunks based on token limits
 def split_text(enc, text, token_limit):
+    # Initialize an empty list to hold the chunks of text
     chunks = []
 
-    # Recursive function to handle different levels of text splitting
+    # Define a recursive function to split the content at different levels
     def recursive_split(content, level):
+        # Access the outer variable chunks
         nonlocal chunks
+        
+        # If the content is empty, return without doing anything
         if len(content.strip()) == 0:
             return
+        
+        # Get the token count of the content
         token_count = len(enc.encode(content))
+        
+        # If the token count is within the limit, add the content to chunks and return
         if token_count <= token_limit:
             chunks.append(content)
             return
 
-        # Splitting logic based on the current level
-        if level == 0:  # Paragraph level
+        # Split the content based on the current level
+        if level == 0:  # Paragraph level: split on two or more newline characters
             parts = re.split(r'(\n\n+)', content)
-        elif level == 1:  # Sentence level
+        elif level == 1:  # Line level: split on single newline characters
+            parts = re.split(r'(\n)', content)
+        elif level == 2:  # Sentence level: split on sentence-ending punctuation
             parts = re.split(r'([.!?]\s*)', content)
-        elif level == 2:  # Sentence fragment level
+            parts = [parts[i] + parts[i + 1] if i + 1 < len(parts) else parts[i] for i in range(0, len(parts), 2)]
+        elif level == 3:  # Sentence fragment level: split on commas and semicolons
             parts = re.split(r'([,;]\s*)', content)
-        else:  # Token level
-            buffer = ''  # Buffer to hold concatenated tokens within the token_limit
-            token_parts = []  # List to hold chunks of tokens
+            parts = [parts[i] + parts[i + 1] if i + 1 < len(parts) else parts[i] for i in range(0, len(parts), 2)]
+        else:  # Token level: split by individual tokens
+            buffer = ''
+            token_parts = []
             tokens = enc.encode(content)
             for token in tokens:
                 decoded_token = enc.decode([token])
-                # Concatenate the decoded token to the buffer if within the token_limit
                 temp_buffer = buffer + decoded_token if buffer else decoded_token
+                # If the buffer with the next token is within the limit, add the token to the buffer
                 if len(enc.encode(temp_buffer)) <= token_limit:
                     buffer = temp_buffer
                 else:
-                    # If the buffer exceeds the token_limit, add to the token_parts
+                    # If the buffer with the next token exceeds the limit, add the buffer to parts and reset the buffer
                     token_parts.append(buffer)
-                    # Start a new buffer with the current decoded token
                     buffer = decoded_token
             if buffer:
-                # Add any remaining buffer to token_parts
                 token_parts.append(buffer)
             parts = token_parts
 
+        # Initialize a buffer to hold parts of the content that fit within the token limit
         buffer = ''
         for part in parts:
+            # If the buffer with the next part is within the limit, add the part to the buffer
             if len(enc.encode(buffer + part)) <= token_limit:
                 buffer += part
             else:
-                # If the buffer exceeds the token_limit, recursively split it
+                # If the buffer with the next part exceeds the limit, recursively split the buffer at the next level
                 recursive_split(buffer, level + 1)
-                # Start a new buffer with the current part
+                # Reset the buffer with the current part
                 buffer = part
 
+        # If there's any content left in the buffer, recursively split it at the next level
         if buffer:
-            # Recursively split any remaining buffer
             recursive_split(buffer, level + 1)
 
-    recursive_split(text, 0)  # Start recursion at the paragraph level
-
-    # Filter out empty strings before returning
+    # Start the recursion at the paragraph level
+    recursive_split(text, 0)
+    
+    # Filter out empty strings and return the chunks
     chunks = [chunk for chunk in chunks if chunk.strip()]
-
     return {"chunks": chunks}
 
 # Endpoint for tokenizing text
