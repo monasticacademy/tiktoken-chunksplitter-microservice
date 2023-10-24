@@ -65,8 +65,8 @@ def split_text(enc, text, token_limit):
         elif level == 2:  # Sentence level: split on sentence-ending punctuation
             parts = re.split(r'([.!?]\s*)', content)
             parts = [parts[i] + parts[i + 1] if i + 1 < len(parts) else parts[i] for i in range(0, len(parts), 2)]
-        elif level == 3:  # Sentence fragment level: split on commas, semicolons, end parentheses, end brackets, and end curly braces
-            parts = re.split(r'([,;)\]\}]\s*)', content)
+        elif level == 3:  # Sentence fragment level: split on commas and semicolons
+            parts = re.split(r'([,;]\s*)', content)
             parts = [parts[i] + parts[i + 1] if i + 1 < len(parts) else parts[i] for i in range(0, len(parts), 2)]
         else:  # Token level: split by individual tokens
             buffer = ''
