@@ -19,14 +19,9 @@ app = Flask(__name__)
 # Enabling Swagger documentation for the API
 swagger = Swagger(app)
 
-# Users for basic authentication (hardcoded for demonstration purposes)
-users = {
-    "user1": generate_password_hash("password1"),
-}
-
-# Function to authenticate username and password
-def authenticate(username, password):
-    if username in users and check_password_hash(users[username], password):
+# Function to authenticate API Key
+def authenticate(api_key):
+    if api_key == os.getenv('API_KEY'):
         return True
     return False
 
@@ -34,8 +29,8 @@ def authenticate(username, password):
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        auth = request.authorization
-        if not auth or not authenticate(auth.username, auth.password):
+        auth = request.headers.get('API_KEY')
+        if not auth or not authenticate(auth):
             return jsonify({"message": "Authentication required"}), 401
         return f(*args, **kwargs)
     return decorated
