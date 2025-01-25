@@ -120,22 +120,41 @@ def tokenize():
         request_data = request.get_json()
 
     try:
+        # Log the request info for debugging
+        logger.info(f"Raw request data: {request.data.decode('utf-8')}")
+        logger.info(f"Parsed JSON data: {request_data}")
+
         # Validating required parameters
         if not request_data:
-            return jsonify({"error": "JSON payload expected with content type 'application/json'"}), 400
+            logger.error("No JSON data found in request. "
+                         f"Content-Type was {request.content_type}")
+            return jsonify({
+                "error": "JSON payload expected with content type 'application/json'"
+            }), 400
+
         model_name = request_data.get('model_name')
         token_limit = request_data.get('token_limit')
         text = request_data.get('text')
+
         if not model_name or not token_limit or not text:
+            logger.error(f"Missing params. Received: model_name={model_name}, "
+                         f"token_limit={token_limit}, text={text}")
             return jsonify({"error": "model_name, token_limit, and text are required parameters"}), 400
+
         token_limit = int(token_limit)
         if token_limit <= 0:
+            logger.error(f"token_limit must be > 0, received: {token_limit}")
             return jsonify({"error": "token_limit must be greater than 0"}), 400
 
         # Encoding and splitting text
         enc = tiktoken.encoding_for_model(model_name)
-        return jsonify(split_text(enc, text, token_limit))
+        result = split_text(enc, text, token_limit)
+        logger.info(f"Split text result: {result}")
+        return jsonify(result)
+
     except Exception as e:
+        # Log the exception with traceback info
+        logger.exception("An error occurred in the /tokenize endpoint")
         return jsonify({"error": str(e)}), 400
 
 # After-request handler for logging
