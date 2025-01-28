@@ -21,7 +21,11 @@ swagger = Swagger(app)
 
 # Function to authenticate API Key
 def authenticate(api_key):
-    if api_key == os.getenv('API_KEY'):
+    env_key = os.getenv('API_KEY')
+    logger.info(f"Received API key: {api_key}")
+    logger.info(f"Environment API key: {env_key}")
+    logger.info(f"Keys match: {api_key == env_key}")
+    if api_key == env_key:
         return True
     return False
 
