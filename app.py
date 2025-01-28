@@ -34,6 +34,8 @@ def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.headers.get('API_KEY')
+        logger.debug(f"Headers received: {dict(request.headers)}")
+        logger.debug(f"API_KEY header present: {auth is not None}")
         if not auth or not authenticate(auth):
             return jsonify({"message": "Authentication required"}), 401
         return f(*args, **kwargs)
