@@ -33,9 +33,19 @@ def authenticate(api_key):
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        auth = request.headers.get('API_KEY')
-        logger.debug(f"Headers received: {dict(request.headers)}")
-        logger.debug(f"API_KEY header present: {auth is not None}")
+        # Try different ways headers might be formatted
+        auth = (request.headers.get('API_KEY') or 
+                request.headers.get('Api-Key') or 
+                request.headers.get('api_key') or
+                request.headers.get('api-key'))
+        
+        logger.error("==== AUTH DEBUG ====")
+        logger.error(f"All Headers: {dict(request.headers)}")
+        logger.error(f"Raw Authorization: {request.headers.get('Authorization')}")
+        logger.error(f"API_KEY from headers (all attempts): {auth}")
+        logger.error(f"API_KEY from env: {os.getenv('API_KEY')}")
+        logger.error("===================")
+        
         if not auth or not authenticate(auth):
             return jsonify({"message": "Authentication required"}), 401
         return f(*args, **kwargs)
@@ -120,48 +130,45 @@ def split_text(enc, text, token_limit):
 @swag_from('swagger.yaml')
 @requires_auth
 def tokenize():
-    # Checking content type
-    request_data = None
-    if request.content_type == 'application/json':
-        request_data = request.get_json()
-
     try:
-        # Log the request info for debugging
-        logger.info(f"Raw request data: {request.data.decode('utf-8')}")
-        logger.info(f"Parsed JSON data: {request_data}")
-
-        # Validating required parameters
-        if not request_data:
-            logger.error("No JSON data found in request. "
-                         f"Content-Type was {request.content_type}")
-            return jsonify({
-                "error": "JSON payload expected with content type 'application/json'"
-            }), 400
-
-        model_name = request_data.get('model_name')
-        token_limit = request_data.get('token_limit')
-        text = request_data.get('text')
-
-        if not model_name or not token_limit or not text:
-            logger.error(f"Missing params. Received: model_name={model_name}, "
-                         f"token_limit={token_limit}, text={text}")
-            return jsonify({"error": "model_name, token_limit, and text are required parameters"}), 400
-
-        token_limit = int(token_limit)
-        if token_limit <= 0:
-            logger.error(f"token_limit must be > 0, received: {token_limit}")
-            return jsonify({"error": "token_limit must be greater than 0"}), 400
-
-        # Encoding and splitting text
-        enc = tiktoken.encoding_for_model(model_name)
-        result = split_text(enc, text, token_limit)
-        logger.info(f"Split text result: {result}")
-        return jsonify(result)
-
+        # Attempt to parse JSON; if the JSON is malformed, Flask will catch the exception.
+        data = request.get_json()
+        if not data:
+            raise ValueError("No JSON found in request.")
     except Exception as e:
-        # Log the exception with traceback info
-        logger.exception("An error occurred in the /tokenize endpoint")
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Invalid JSON: {str(e)}"}), 400
+
+    # Log the request info for debugging
+    logger.info(f"Raw request data: {request.data.decode('utf-8')}")
+    logger.info(f"Parsed JSON data: {data}")
+
+    # Validating required parameters
+    if not data:
+        logger.error("No JSON data found in request. "
+                     f"Content-Type was {request.content_type}")
+        return jsonify({
+            "error": "JSON payload expected with content type 'application/json'"
+        }), 400
+
+    model_name = data.get('model_name')
+    token_limit = data.get('token_limit')
+    text = data.get('text')
+
+    if not model_name or not token_limit or not text:
+        logger.error(f"Missing params. Received: model_name={model_name}, "
+                     f"token_limit={token_limit}, text={text}")
+        return jsonify({"error": "model_name, token_limit, and text are required parameters"}), 400
+
+    token_limit = int(token_limit)
+    if token_limit <= 0:
+        logger.error(f"token_limit must be > 0, received: {token_limit}")
+        return jsonify({"error": "token_limit must be greater than 0"}), 400
+
+    # Encoding and splitting text
+    enc = tiktoken.encoding_for_model(model_name)
+    result = split_text(enc, text, token_limit)
+    logger.info(f"Split text result: {result}")
+    return jsonify(result)
 
 # After-request handler for logging
 @app.after_request
