@@ -1,7 +1,7 @@
 TikToken Microservice
 ===================
 
-This microservice provides an API to tokenize text using TikToken into chunks based on a specific model's token limit.
+This microservice provides an API to tokenize text using TikToken into chunks based on a specific model's token limit.  It tries to find logical places at which to split the chunks, then recursively splits them at the next best place to get the proper sized chunk based on your specific token usecase.
 
 API Endpoint
 ------------
